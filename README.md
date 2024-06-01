@@ -17,3 +17,5 @@ DX-G gd1 (공공기관) (https://api.ucloudbiz.olleh.com/gd1/server/flavors)
 작성된 코드 중 일부는 KTcloud 에서 제공하는 openapi 메뉴얼에 존재하지 않았지만 여러 테스트와 추측을 통해서 발견한 내용입니다.
 
 KTcloud 에도 "serverless code run" 이라는 무료 상품이 있지만 공공기관에서는 해당 상품이 제공되지 않기에 NCP의 cloud function 기능을 위해 작성한 코드 입니다.
+
+2024년 6월 1일 작성
