@@ -9,9 +9,13 @@ baseurl 에서 플랫폼 D 에 있는 존을 구분할 수 있는데
 예로 오픈스택에 falvor 정보를 조회할 수 있는 openapi 주소 인 "https://api.ucloudbiz.olleh.com/d1/server/flavors" 를 본다면
 
 아래의 내용에서 처럼 "d1" 은 M1 존을 의미하며 자신이 사용중인 각 존에 맞춰 사용하면 됩니다.
+
 DX-M1	d1 (https://api.ucloudbiz.olleh.com/d1/server/flavors)
+
 DX-Central	d2 (https://api.ucloudbiz.olleh.com/d2/server/flavors)
+
 DX-DCN-CJ	d3 (https://api.ucloudbiz.olleh.com/d3/server/flavors)
+
 DX-G gd1 (공공기관) (https://api.ucloudbiz.olleh.com/gd1/server/flavors)
 
 작성된 코드 중 일부는 KTcloud 에서 제공하는 openapi 메뉴얼에 존재하지 않았지만 여러 테스트와 추측을 통해서 발견한 내용입니다.
