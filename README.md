@@ -6,7 +6,7 @@ KTcloud 에서는 크게 G 와 D 플랫폼이 존재하며 이에 따라 openapi
 
 baseurl 에서 플랫폼 D 에 있는 존을 구분할 수 있는데
 
-예로 오픈스택에 falvor 정보를 조회할 수 있는 openapi 주소 인 "https://api.ucloudbiz.olleh.com/d1/server/flavors" 를 본다면
+예로 오픈스택에 flavor 정보를 조회할 수 있는 openapi 주소 인 "https://api.ucloudbiz.olleh.com/d1/server/flavors" 를 본다면
 
 아래의 내용에서 처럼 "d1" 은 M1 존을 의미하며 자신이 사용중인 각 존에 맞춰 사용하면 됩니다.
 
