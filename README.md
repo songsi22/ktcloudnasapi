@@ -22,4 +22,11 @@ DX-G gd1 (공공기관) (https://api.ucloudbiz.olleh.com/gd1/server/flavors)
 
 KTcloud 에도 "serverless code run" 이라는 무료 상품이 있지만 공공기관에서는 해당 상품이 제공되지 않기에 NCP의 cloud function 기능을 위해 작성한 코드 입니다.
 
+실행 파라미터 예시
+python 에서 직접 실행하려면 
+main({"nasname": "productnas","user":"root@root.com","pwd":"rootpwd"})
+
+NCP cloud function 에서 실행을 위해 사용하려면 
+{"nasname": "productnas","user":"root@root.com","pwd":"rootpwd"}
+
 2024년 6월 1일 작성
