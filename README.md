@@ -29,7 +29,7 @@ main({"nasname": "productnas","user":"root@root.com","pwd":"rootpwd"})
 NCP cloud function 에서 실행을 위해 사용하려면 
 {"nasname": "productnas","user":"root@root.com","pwd":"rootpwd"}
 
-현재 본인의 업무를 위해 작성한 로직은 다음과 같습니다.
+현재 본인의 업무를 위해(공공기관이기에 gd1을 사용) 작성한 로직은 다음과 같습니다.
 
 1. cloud function 을 통해 일주일에 1회만 실행된다
 2. 특정 NAS에 snapshot 이 2개 미만일때에는 NAS snapshot 을 생성한다
