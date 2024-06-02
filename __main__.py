@@ -15,8 +15,9 @@ def main(args: Dict[str, str]) -> Dict[str, str]:
     nasname = args['nasname']
 
     try:
-        auth = get_token(user, pwd)
-        project_id = get_project_id(auth)
+        api_result = get_token(user, pwd)
+        auth = api_result.headers['X-Subject-Token']
+        project_id = api_result.json()['token']['project']['id']
         snapshots = get_nas_snapshots(auth, project_id)
 
         if len(snapshots) < 2:
@@ -105,15 +106,7 @@ def get_token(user: str, pwd: str) -> str:
     }
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
-    return response.headers['X-Subject-Token']
-
-def get_project_id(auth: str) -> str:
-    """
-    Get the project ID.
-    """
-    url = f'{BASE_URL}/nc/Network'
-    response = make_get_request(auth, url).json()
-    return response['nc_listosnetworksresponse']['networks'][0]['projectid']
+    return response
 
 def get_nas_id(auth: str, project_id: str, nasname: str) -> Optional[str]:
     """
