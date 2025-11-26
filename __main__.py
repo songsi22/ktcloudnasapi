@@ -2,43 +2,77 @@ import time
 import pytz
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 BASE_URL = 'https://api.ucloudbiz.olleh.com/gd1'
 
-def main(args: Dict[str, str]) -> Dict[str, str]:
+
+def main(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Main function to manage NAS snapshots.
+    여러 NAS 에 대해 스냅샷을 관리하는 메인 함수.
+    args["nasname"] 는 str 또는 List[str] 둘 다 허용.
     """
     user = args['user']
     pwd = args['pwd']
-    nasname = args['nasname']
+    nasnames_arg = args['nasname']
+
+    # nasname 이 str 로 들어와도 리스트로 통일해서 처리
+    if isinstance(nasnames_arg, str):
+        nasnames: List[str] = [nasnames_arg]
+    else:
+        nasnames = list(nasnames_arg)
 
     try:
         api_result = get_token(user, pwd)
         auth = api_result.headers['X-Subject-Token']
         project_id = api_result.json()['token']['project']['id']
-        snapshots = get_nas_snapshots(auth, project_id)
 
-        if len(snapshots) < 2:
-            nas_id = get_nas_id(auth, project_id, nasname)
-            status_code = create_nas_snapshot(auth, project_id, nasname, nas_id)
-            return {"result": f"Created processing... Status code: {status_code}"}
-        else:
-            expired_snapshot_ids = get_expired_snapshot_ids(snapshots)
-            if not expired_snapshot_ids:
-                return {"result": "No expired snapshot"}
-            else:
-                delete_expired_snapshots(auth, project_id, expired_snapshot_ids)
-                return {"result": "Delete processed"}
+        # 스냅샷 리스트는 한 번만 조회
+        all_snapshots = get_nas_snapshots(auth, project_id)
+        print("All snapshots:", all_snapshots)
+
+        results: Dict[str, str] = {}
+
+        for nasname in nasnames:
+            try:
+                nas_id = get_nas_id(auth, project_id, nasname)
+                if not nas_id:
+                    results[nasname] = "NAS not found"
+                    continue
+
+                # 해당 NAS 의 스냅샷만 필터링
+                snapshots_for_nas = [
+                    s for s in all_snapshots
+                    if s.get("share_id") == nas_id
+                ]
+
+                if len(snapshots_for_nas) < 2:
+                    status_code = create_nas_snapshot(auth, project_id, nasname, nas_id)
+                    results[nasname] = f"Created snapshot (status: {status_code})"
+                else:
+                    expired_snapshot_ids = get_expired_snapshot_ids(snapshots_for_nas)
+                    if not expired_snapshot_ids:
+                        results[nasname] = "No expired snapshot"
+                    else:
+                        delete_expired_snapshots(auth, project_id, expired_snapshot_ids)
+                        results[nasname] = f"Deleted {len(expired_snapshot_ids)} expired snapshot(s)"
+            except Exception as e:
+                # NAS 개별 처리 중 에러는 개별 NAS 에 대한 결과로 남김
+                results[nasname] = f"Error: {e}"
+
+        return {"result": results}
+
     except Exception as e:
+        # 토큰 발급 등 전체 처리 중 에러
         return {"error": str(e)}
+
 
 def create_nas_snapshot(auth: str, project_id: str, nasname: str, nas_id: str) -> int:
     """
     Create a NAS snapshot.
     """
     url = f'{BASE_URL}/nas/{project_id}/snapshots'
+
     createtime = datetime.now().strftime("%y%m%d-%H:%M")
     data = {
         "snapshot": {
@@ -51,6 +85,7 @@ def create_nas_snapshot(auth: str, project_id: str, nasname: str, nas_id: str) -
     response = make_post_request(auth, url, data)
     return response.status_code
 
+
 def make_post_request(auth: str, url: str, data: Dict) -> requests.Response:
     """
     Make a POST request.
@@ -59,6 +94,7 @@ def make_post_request(auth: str, url: str, data: Dict) -> requests.Response:
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
     return response
+
 
 def make_get_request(auth: str, url: str) -> requests.Response:
     """
@@ -69,6 +105,7 @@ def make_get_request(auth: str, url: str) -> requests.Response:
     response.raise_for_status()
     return response
 
+
 def make_delete_request(auth: str, url: str) -> requests.Response:
     """
     Make a DELETE request.
@@ -78,7 +115,8 @@ def make_delete_request(auth: str, url: str) -> requests.Response:
     response.raise_for_status()
     return response
 
-def get_token(user: str, pwd: str) -> str:
+
+def get_token(user: str, pwd: str) -> requests.Response:
     """
     Get an authentication token.
     """
@@ -108,6 +146,7 @@ def get_token(user: str, pwd: str) -> str:
     response.raise_for_status()
     return response
 
+
 def get_nas_id(auth: str, project_id: str, nasname: str) -> Optional[str]:
     """
     Get the NAS ID.
@@ -115,6 +154,7 @@ def get_nas_id(auth: str, project_id: str, nasname: str) -> Optional[str]:
     url = f'{BASE_URL}/nas/{project_id}/shares'
     shares = make_get_request(auth, url).json()['shares']
     return next((share["id"] for share in shares if share["name"] == nasname), None)
+
 
 def get_nas_snapshots(auth: str, project_id: str) -> List[Dict]:
     """
@@ -124,9 +164,10 @@ def get_nas_snapshots(auth: str, project_id: str) -> List[Dict]:
     response = make_get_request(auth, url).json()
     return response['snapshots']
 
+
 def get_expired_snapshot_ids(snapshots: List[Dict]) -> List[str]:
     """
-    Get IDs of expired snapshots.
+    Get IDs of expired snapshots (older than 2 weeks).
     """
     current_time = datetime.now()
     expired_date = current_time - timedelta(weeks=2)
@@ -142,6 +183,7 @@ def get_expired_snapshot_ids(snapshots: List[Dict]) -> List[str]:
             expired_ids.append(snapshot["id"])
 
     return expired_ids
+
 
 def delete_expired_snapshots(auth: str, project_id: str, snapshot_ids: List[str]) -> None:
     """
