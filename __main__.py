@@ -10,11 +10,16 @@ BASE_URL = 'https://api.ucloudbiz.olleh.com/gd1'
 def main(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     여러 NAS 에 대해 스냅샷을 관리하는 메인 함수.
-    args["nasname"] 는 str 또는 List[str] 둘 다 허용.
+    args:
+      - user: 계정 ID
+      - pwd: 비밀번호
+      - nasname: str 또는 List[str]
+      - force_delete: True 이면 스냅샷을 즉시 모두 삭제 (2주 보관 체크 없음)
     """
     user = args['user']
     pwd = args['pwd']
     nasnames_arg = args['nasname']
+    force_delete = args.get('force_delete', False)
 
     # nasname 이 str 로 들어와도 리스트로 통일해서 처리
     if isinstance(nasnames_arg, str):
@@ -46,10 +51,22 @@ def main(args: Dict[str, Any]) -> Dict[str, Any]:
                     if s.get("share_id") == nas_id
                 ]
 
+                # ✅ force_delete 모드: 해당 NAS 의 모든 스냅샷 즉시 삭제
+                if force_delete:
+                    if not snapshots_for_nas:
+                        results[nasname] = "No snapshots to delete"
+                    else:
+                        snapshot_ids = [s["id"] for s in snapshots_for_nas]
+                        delete_expired_snapshots(auth, project_id, snapshot_ids)
+                        results[nasname] = f"Force deleted {len(snapshot_ids)} snapshot(s)"
+                    continue
+
+                # ✅ 기본 모드: 스냅샷 2개 미만이면 새로 생성
                 if len(snapshots_for_nas) < 2:
                     status_code = create_nas_snapshot(auth, project_id, nasname, nas_id)
                     results[nasname] = f"Created snapshot (status: {status_code})"
                 else:
+                    # 2주 지난 스냅샷만 삭제
                     expired_snapshot_ids = get_expired_snapshot_ids(snapshots_for_nas)
                     if not expired_snapshot_ids:
                         results[nasname] = "No expired snapshot"
@@ -57,13 +74,11 @@ def main(args: Dict[str, Any]) -> Dict[str, Any]:
                         delete_expired_snapshots(auth, project_id, expired_snapshot_ids)
                         results[nasname] = f"Deleted {len(expired_snapshot_ids)} expired snapshot(s)"
             except Exception as e:
-                # NAS 개별 처리 중 에러는 개별 NAS 에 대한 결과로 남김
                 results[nasname] = f"Error: {e}"
 
         return {"result": results}
 
     except Exception as e:
-        # 토큰 발급 등 전체 처리 중 에러
         return {"error": str(e)}
 
 
@@ -83,6 +98,7 @@ def create_nas_snapshot(auth: str, project_id: str, nasname: str, nas_id: str) -
         }
     }
     response = make_post_request(auth, url, data)
+    print(response.text)
     return response.status_code
 
 
@@ -92,6 +108,7 @@ def make_post_request(auth: str, url: str, data: Dict) -> requests.Response:
     """
     headers = {"Content-Type": "application/json", "X-Auth-Token": auth}
     response = requests.post(url, json=data, headers=headers)
+    print(response.text)
     response.raise_for_status()
     return response
 
@@ -187,7 +204,8 @@ def get_expired_snapshot_ids(snapshots: List[Dict]) -> List[str]:
 
 def delete_expired_snapshots(auth: str, project_id: str, snapshot_ids: List[str]) -> None:
     """
-    Delete expired snapshots.
+    Delete snapshots by ID list.
+    (force_delete 에서도 재사용)
     """
     for snapshot_id in snapshot_ids:
         url = f'{BASE_URL}/nas/{project_id}/snapshots/{snapshot_id}'
